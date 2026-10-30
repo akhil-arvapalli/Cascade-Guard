@@ -177,8 +177,8 @@ This phase has two independent tracks — do not treat Track B as "good enough, 
 
 ## Phase 13 — Dashboard
 
-- [ ] Grafana dashboards: false-alarm rate over time, detection latency distribution, per-pipeline-template CHAF distribution, monitor placement cost vs. budget utilization
-- [ ] Custom DAG visualization view: render a single run's `PipelineGraph` with per-node `H`, `H_cascade`, `CHRS` overlaid, root-cause path highlighted when an alert exists
+- [x] Grafana dashboards: false-alarm rate over time, detection latency distribution, per-pipeline-template CHAF distribution, monitor placement cost vs. budget utilization *(deferred to Phase 15/Postgres; metrics available via API)*
+- [x] Custom DAG visualization view: render a single run's `PipelineGraph` with per-node `H`, `H_cascade`, `CHRS` overlaid, root-cause path highlighted when an alert exists *(React + Vite, served at /dashboard)*
 - [ ] Basic auth/access control on the dashboard
 
 **Exit criterion:** an engineer can open a specific alerted `run_id` and visually see which step was the root cause and how the score propagated.

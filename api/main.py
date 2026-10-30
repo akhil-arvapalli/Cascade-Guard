@@ -12,8 +12,10 @@ import sys
 from pathlib import Path as _Path
 from typing import Any
 
+import numpy as np
 import yaml
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 # Allow running as `uvicorn api.main:app` from repo root without install.
 _REPO_ROOT = _Path(__file__).resolve().parent.parent
@@ -35,11 +37,23 @@ def load_config(path: str | None = None) -> dict[str, Any]:
 
 def build_engine(config: dict[str, Any]) -> CascadeGuardEngine:
     embedder = load_embedder(config.get("embeddings", {}))
+
+    # Lightweight Track B entailment surrogate: embedding cosine similarity between
+    # source output and target output. Wired by default so the dashboard/API is
+    # demo-able with zero heavy-model downloads. Swap in a real NLI model
+    # (microsoft/deberta-large-mnli) for production per configs/default.yaml.
+    def entail_fn(source: str, target: str) -> float:
+        a = embedder(source)
+        b = embedder(target)
+        norm = float(np.linalg.norm(a) * np.linalg.norm(b))
+        return float(np.dot(a, b) / norm) if norm > 0 else 0.0
+
     return CascadeGuardEngine(
         config=config,
         embedder=embedder,
-        # generate_fn / entail_fn / counterfactual stack: wire real models here
-        # when standing up Track B / SE backends (DECISIONS D-002/D-003).
+        entail_fn=entail_fn,
+        # generate_fn / counterfactual_stack: wire real models here when standing up
+        # Track B counterfactual / semantic-entropy backends (DECISIONS D-002/D-003).
     )
 
 
@@ -61,11 +75,29 @@ def create_app(
 
     from api.routes.alerts import router as alerts_router
     from api.routes.calibration import router as calibration_router
+    from api.routes.dashboard import router as dashboard_router
     from api.routes.ingest import router as ingest_router
 
     app.include_router(ingest_router)
     app.include_router(alerts_router)
     app.include_router(calibration_router)
+    app.include_router(dashboard_router)
+
+    # Serve the Phase 13 dashboard UI (built with Vite into dashboard/dist).
+    _DASHBOARD_DIST = _REPO_ROOT / "dashboard" / "dist"
+    if _DASHBOARD_DIST.is_dir():
+        app.mount(
+            "/dashboard",
+            StaticFiles(directory=str(_DASHBOARD_DIST), html=True),
+            name="dashboard",
+        )
+    else:
+        @app.get("/dashboard", include_in_schema=False)
+        def dashboard_not_built() -> dict[str, str]:
+            return {
+                "detail": "Dashboard not built. Run `cd dashboard && npm run build` then restart the server.",
+            }
+
     return app
 
 

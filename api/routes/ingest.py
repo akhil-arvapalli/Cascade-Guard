@@ -151,15 +151,3 @@ def cheap_check(run_id: str, step_id: str, request: Request) -> dict[str, _Any]:
         "fidelity": result.monitored_fidelity[step_id],
     }
 
-
-@router.get("/runs/{run_id}")
-def get_run(run_id: str, request: Request) -> dict[str, _Any]:
-    result = request.app.state.results.get(run_id)
-    record = request.app.state.repository.get_run(run_id)
-    if result is None and record is None:
-        raise HTTPException(404, f"unknown run {run_id}")
-    out = {"run_id": run_id, "run_record": record}
-    if result is not None:
-        out["alerted"] = result.alerted
-        out["analyze_ms"] = round(result.elapsed_ms, 3)
-    return out

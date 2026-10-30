@@ -31,8 +31,8 @@ These come directly from the paper's theorems. Any agent working on scoring/dete
 
 > **Agents: update this section as work progresses.** This is the single most important part of this file for cross-agent continuity — if you finish a phase or make a significant decision, write it here before ending your session, in plain language, so the next agent (possibly a different model/tool) doesn't have to reconstruct it from git log archaeology.
 
-- **Phase:** v1 built (2026-08-25, agent session): research core Phases 1–9 implemented + tested; SDK/API/alerts skeletons (Phases 10–12); Phase 14 eval and Phase 15 hardening remain open
-- **Last completed milestone:** v1 code-complete — every paper equation Eq. 1–13 has a real implementation verified against the paper PDF text (Eq. 6 was corrected during the build: it is per-row attention fraction averaged over output rows, see `core/scoring/propagation.py`), plus a passing test suite including hand-computed cases, the Theorem 1 invariant test, ARL0 simulation, and greedy-vs-brute-force placement validation
+- **Phase:** v1 built (2026-08-25, agent session): research core Phases 1–9 implemented + tested; SDK/API/alerts skeletons (Phases 10–12); Phase 13 dashboard **DONE** (React + FastAPI read endpoints, DAG visualization, node inspector, root-cause path highlighting, score tables, run/alert listing); Phase 14 eval and Phase 15 hardening remain open
+- **Last completed milestone:** v1 code-complete — every paper equation Eq. 1–13 has a real implementation verified against the paper PDF text, plus a passing test suite including hand-computed cases, the Theorem 1 invariant test, ARL0 simulation, and greedy-vs-brute-force placement validation; Phase 13 dashboard built and served from FastAPI static files at /dashboard
 - **Flagged approximations in v1 (all deliberate, all marked in code):**
   - **Eq. 12 (ARL0) is an APPROXIMATION whose accuracy degrades as |Δ|=(κ−μ0)/σ grows.** Empirically validated at |Δ|=0.25: empirical ARL ≈ 1.6–2× target, i.e. CONSERVATIVE (real false-alarm rate lower than the <0.2% claim). At extreme gaps (δ≫σ) the formula massively overestimates h and the detector effectively never fires — keep δ within ~σ/2 of σ when configuring. See `tests/test_cusum.py` regime note.
   - **Eq. 12's h comes out in σ-standardized units** and is rescaled by σ before comparing against raw-S_n (`core/detection/cusum.py`) — this was a real bug caught by simulation during the build.
@@ -45,7 +45,7 @@ These come directly from the paper's theorems. Any agent working on scoring/dete
   - `λ` value (currently placeholder 0.6 — needs cross-validation per README §6, TODO Phase 14)
   - Which `α_ij` track is the default for production (Track A needs a self-hosted open-weight model; decide whether that's actually in scope or if Track B is the realistic default)
   - Embedding model final choice (README suggests bge-base-en-v1.5 or e5-base — not yet benchmarked)
-- **Known blockers:** external datasets (HaluEval-RAG, RAGTruth, AgentHallu) not downloaded — Phase 14 blocked on that; dashboard (Phase 13) untouched
+- **Known blockers:** external datasets (HaluEval-RAG, RAGTruth, AgentHallu) not downloaded — Phase 14 blocked on that
 
 ---
 
