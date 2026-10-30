@@ -93,11 +93,13 @@ def create_app(
     from api.routes.alerts import router as alerts_router
     from api.routes.calibration import router as calibration_router
     from api.routes.dashboard import router as dashboard_router
+    from api.routes.decision import router as decision_router
     from api.routes.ingest import router as ingest_router
 
     app.include_router(ingest_router)
     app.include_router(alerts_router)
     app.include_router(calibration_router)
+    app.include_router(decision_router)
     app.include_router(dashboard_router)
 
     # Serve the Phase 13 dashboard UI (built with Vite into dashboard/dist).

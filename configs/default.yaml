@@ -62,5 +62,13 @@ storage:
 alerts:
   sinks: [] # e.g. [{type: webhook, url: ...}, {type: slack, url: ...}]
 
+blocking:
+  # In-band decision endpoint POST /v1/decision/{run_id}/{step_id} (Phase 12):
+  # notify_only returns scores but never blocks; block enforces the gates below.
+  mode: "notify_only" # "notify_only" | "block"
+  # Absolute CHRS gate on top of the CUSUM control-limit projection — catches
+  # single-step risk before S_n accumulates. null disables the gate.
+  threshold_tau: null # e.g. 0.6
+
 latency_budget_ms:
   cheap_check_per_step: 12 # the paper's headline overhead target
