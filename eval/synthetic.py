@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import random
 
-from core.graph.pipeline_graph import Document, PipelineGraph, Step
+from core.graph.pipeline_graph import Document, PipelineGraph, Step, StepKind
 
 
-def _step(step_id, kind, output, docs_content=None, preds=None):
+def _step(
+    step_id: str,
+    kind: StepKind,
+    output: str,
+    docs_content: list[str] | None = None,
+    preds: list[str] | None = None,
+) -> Step:
     return Step(
         id=step_id,
         kind=kind,

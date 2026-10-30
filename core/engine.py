@@ -101,10 +101,17 @@ class CascadeGuardEngine:
     # -- calibration / placement -------------------------------------------
 
     def calibrate(self, clean_chrs_values: list[float]) -> tuple[float, float]:
+        """Recalibrate μ0/σ from labeled-clean CHRS values (README §4.7).
+
+        Clears the detector pool afterwards: CusumDetector fixes κ and h at
+        construction, so pooled detectors would otherwise keep running on the
+        stale (placeholder) limits.
+        """
         from core.detection.cusum import calibrate
 
         mu0, sigma = calibrate(clean_chrs_values)
         self.cusum_params.mu0, self.cusum_params.sigma = mu0, sigma
+        self.detector_pool.clear()
         return mu0, sigma
 
     def refresh_placement(self, template_id: str, graph: PipelineGraph) -> set[str]:

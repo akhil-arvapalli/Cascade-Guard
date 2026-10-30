@@ -150,4 +150,3 @@ def cheap_check(run_id: str, step_id: str, request: Request) -> dict[str, _Any]:
         "chrs": result.chrs[step_id],
         "fidelity": result.monitored_fidelity[step_id],
     }
-

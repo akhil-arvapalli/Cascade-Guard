@@ -117,3 +117,13 @@ class CusumDetectorPool:
     def complete(self, run_id: str) -> None:
         """Garbage-collect state on pipeline completion."""
         self._detectors.pop(run_id, None)
+
+    def clear(self) -> None:
+        """Drop every pooled detector.
+
+        Required after recalibration: CusumDetector snapshots κ and the control
+        limit h at construction, so pooled detectors would keep operating on
+        stale limits (root cause of the false-alarm-on-clean-trace smoke-test
+        finding, 2026-10-30).
+        """
+        self._detectors.clear()

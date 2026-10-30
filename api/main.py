@@ -48,13 +48,30 @@ def build_engine(config: dict[str, Any]) -> CascadeGuardEngine:
         norm = float(np.linalg.norm(a) * np.linalg.norm(b))
         return float(np.dot(a, b) / norm) if norm > 0 else 0.0
 
-    return CascadeGuardEngine(
+    engine = CascadeGuardEngine(
         config=config,
         embedder=embedder,
         entail_fn=entail_fn,
         # generate_fn / counterfactual_stack: wire real models here when standing up
         # Track B counterfactual / semantic-entropy backends (DECISIONS D-002/D-003).
     )
+    _load_persisted_calibration(engine, config)
+    return engine
+
+
+def _load_persisted_calibration(engine: CascadeGuardEngine, config: dict[str, Any]) -> None:
+    """Boot-time reload of persisted CUSUM calibration (data/calibration.json).
+
+    Without this the engine falls back to un-calibrated placeholder μ0/σ and
+    the detector false-alarms on clean traces (smoke test, 2026-10-30).
+    """
+    from storage.calibration_store import DEFAULT_PATH, CalibrationStore
+
+    path = config.get("cusum", {}).get("calibration_store_path", DEFAULT_PATH)
+    cal = CalibrationStore(path).load()
+    if cal is not None:
+        engine.cusum_params.mu0 = cal["mu0"]
+        engine.cusum_params.sigma = cal["sigma"]
 
 
 def create_app(
@@ -92,10 +109,11 @@ def create_app(
             name="dashboard",
         )
     else:
+
         @app.get("/dashboard", include_in_schema=False)
         def dashboard_not_built() -> dict[str, str]:
             return {
-                "detail": "Dashboard not built. Run `cd dashboard && npm run build` then restart the server.",
+                "detail": ("Dashboard not built. Run `cd dashboard && npm run build` then restart.")
             }
 
     return app

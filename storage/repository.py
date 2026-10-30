@@ -33,6 +33,8 @@ class TraceRepository(Protocol):
         self, run_id: str, src: str, dst: str, alpha_value: float, alpha_method: str
     ) -> None: ...
     def save_cusum_state(self, run_id: str, state: dict[str, float]) -> None: ...
+    def save_calibration(self, mu0: float, sigma: float, updated_at: float) -> None: ...
+    def get_calibration(self) -> dict[str, float] | None: ...
     def insert_alert(self, alert: AlertRecord) -> None: ...
     def list_alerts(self, run_id: str | None = None) -> list[AlertRecord]: ...
     def get_run(self, run_id: str) -> dict[str, Any] | None: ...
@@ -50,6 +52,7 @@ class InMemoryTraceRepository:
         self._steps: dict[str, tuple[str, Step, dict]] = {}
         self._edges: dict[tuple[str, str], dict] = {}
         self._cusum: dict[str, dict[str, float]] = {}
+        self._calibration: dict[str, float] | None = None
         self._alerts: list[AlertRecord] = []
 
     def create_run(self, run_id: str, template_id: str) -> None:
@@ -85,6 +88,12 @@ class InMemoryTraceRepository:
 
     def save_cusum_state(self, run_id: str, state: dict[str, float]) -> None:
         self._cusum[run_id] = dict(state)
+
+    def save_calibration(self, mu0: float, sigma: float, updated_at: float) -> None:
+        self._calibration = {"mu0": mu0, "sigma": sigma, "updated_at": updated_at}
+
+    def get_calibration(self) -> dict[str, float] | None:
+        return dict(self._calibration) if self._calibration else None
 
     def insert_alert(self, alert: AlertRecord) -> None:
         self._alerts.append(alert)

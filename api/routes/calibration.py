@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import time
+
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+
+from core.detection.cusum import CusumConfigError
+from storage.calibration_store import DEFAULT_PATH, CalibrationStore
 
 router = APIRouter(prefix="/v1")
 
@@ -15,7 +20,21 @@ class CalibrateIn(BaseModel):
 @router.post("/calibration/cusum")
 def calibrate_cusum(payload: CalibrateIn, request: Request) -> dict[str, float]:
     engine = request.app.state.engine
-    mu0, sigma = engine.calibrate(payload.clean_chrs_values)
+    try:
+        mu0, sigma = engine.calibrate(payload.clean_chrs_values)
+    except CusumConfigError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+    # Persist so recalibration survives restarts. The path is config-gated
+    # (tests isolate via tmp paths); empty string disables persistence.
+    store_path = request.app.state.config.get("cusum", {}).get(
+        "calibration_store_path", DEFAULT_PATH
+    )
+    if store_path:
+        CalibrationStore(store_path).save(
+            mu0, sigma, extra={"n_samples": len(payload.clean_chrs_values)}
+        )
+        request.app.state.repository.save_calibration(mu0, sigma, updated_at=time.time())
     return {"mu0": mu0, "sigma": sigma}
 
 

@@ -8,8 +8,13 @@ risk_combiner:
 
 cusum:
   arl0_target: 500 # → <0.2% false-alarm rate per Eq. 12
-  delta: 0.1 # minimum detectable CHRS shift
+  # δ must sit near σ/2 of the CALIBRATED σ (AGENTS.md §3 Eq.12 regime note):
+  # calibrated σ≈0.059 (scripts/calibrate.py, production wiring) → δ=0.03 gives
+  # |Δ|=δ/(2σ)≈0.25, the empirically validated regime. Revisit after any
+  # embedding-backend change (V2-1/D-003) — placeholder H inflates clean CHRS tails.
+  delta: 0.03 # minimum detectable CHRS shift
   # mu0 / sigma are NOT set here — they must come from calibrate() on labeled-clean traces.
+  calibration_store_path: "data/calibration.json" # persisted by scripts/calibrate.py; reloaded at boot
 
 monitor_placement:
   budget_B: 10.0 # compute-cost units per pipeline execution

@@ -10,10 +10,13 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
+from core.engine import AnalysisResult
+from core.graph.pipeline_graph import PipelineGraph
+
 router = APIRouter(prefix="/v1")
 
 
-def _node_json(node_id: str, graph, result) -> dict[str, Any]:
+def _node_json(node_id: str, graph: PipelineGraph, result: AnalysisResult) -> dict[str, Any]:
     step = graph.nodes[node_id]
     return {
         "id": node_id,
@@ -33,7 +36,7 @@ def _node_json(node_id: str, graph, result) -> dict[str, Any]:
     }
 
 
-def _edge_json(src: str, dst: str, result) -> dict[str, Any]:
+def _edge_json(src: str, dst: str, result: AnalysisResult) -> dict[str, Any]:
     ares = result.alpha_edges.get((src, dst))
     return {
         "src": src,
@@ -55,7 +58,9 @@ def list_runs(request: Request) -> dict[str, Any]:
                 "pipeline_template_id": record.get("pipeline_template_id"),
                 "started_at": record.get("started_at"),
                 "status": record.get("status"),
-                "step_count": len(request.app.state.run_graphs.get(run_id, type("G", (), {"nodes": {}})()).nodes),
+                "step_count": len(
+                    request.app.state.run_graphs.get(run_id, type("G", (), {"nodes": {}})()).nodes
+                ),
                 "alerted": bool(result and result.alerted),
                 "analyze_ms": round(result.elapsed_ms, 3) if result else None,
             }
