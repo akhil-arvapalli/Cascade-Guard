@@ -85,7 +85,7 @@ This phase has two independent tracks — do not treat Track B as "good enough, 
 - [x] Implement semantic clustering via bidirectional NLI entailment (not naive embedding k-means — match the paper's definition)
 - [x] Implement `semantic_entropy()` per Eq. 9
 - [x] Cost-guard: make `K` and the "only run when selected by placement optimizer" rule enforced at the call site, not just documented
-- [ ] Unit tests: fully consistent samples → SE≈0; maximally diverse samples → SE near `log(K)`
+- [x] Unit tests: fully consistent samples → SE≈0; maximally diverse samples → SE near `log(K)` *(already existed in tests/test_semantic_entropy.py — checkbox was stale)*
 
 **Exit criterion:** SE computed correctly, and demonstrably *not* invoked on unmonitored steps in an integration test.
 
@@ -168,7 +168,7 @@ This phase has two independent tracks — do not treat Track B as "good enough, 
 - [x] Implement pluggable alert sink interface
 - [x] Implement Slack webhook sink
 - [x] Implement generic webhook sink
-- [ ] Implement (optional) in-band blocking mode — pipeline pauses/short-circuits on alert rather than only notifying after the fact
+- [x] Implement (optional) in-band blocking mode — pipeline pauses/short-circuits on alert rather than only notifying after the fact *(POST /v1/decision/{run_id}/{step_id}: ephemeral CUSUM projection + optional absolute CHRS gate; config blocking.mode/threshold_tau; notify_only default)*
 - [x] Test: alert fires exactly once per run (no duplicate/spam alerts from repeated CUSUM checks on the same run)
 
 **Exit criterion:** alerts reliably reach at least one real sink (Slack) in an integration test, with root-cause info attached.
