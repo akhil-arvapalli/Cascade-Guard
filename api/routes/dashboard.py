@@ -81,6 +81,16 @@ def get_run_detail(run_id: str, request: Request) -> dict[str, Any]:
     nodes = [_node_json(nid, graph, result) for nid in graph.topo_order()] if result else []
     edges = [_edge_json(s, d, result) for (s, d) in graph.edges] if result else []
 
+    # Attach contribution-ranked root causes from the analysis result (the
+    # persisted AlertRecord only keeps the single top root_cause_step).
+    rc_by_step: dict[str, list[dict[str, Any]]] = {}
+    if result:
+        for al in result.alerts:
+            rc_by_step[al.triggered_at_step] = [
+                {"step_id": rc.step_id, "share": rc.share, "path_length": rc.path_length}
+                for rc in al.root_causes
+            ]
+
     return {
         "run_id": run_id,
         "run_record": record,
@@ -94,6 +104,7 @@ def get_run_detail(run_id: str, request: Request) -> dict[str, Any]:
                 "triggered_at_step": a.triggered_at_step,
                 "s_n_value": a.s_n_value,
                 "root_cause_step": a.root_cause_step,
+                "root_causes": rc_by_step.get(a.triggered_at_step, []),
                 "created_at": a.created_at,
             }
             for a in alerts

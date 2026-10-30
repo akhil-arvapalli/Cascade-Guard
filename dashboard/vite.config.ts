@@ -8,4 +8,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  server: {
+    // `npm run dev` proxies API calls to the FastAPI engine.
+    proxy: {
+      '/v1': 'http://localhost:8000',
+    },
+  },
 })

@@ -68,27 +68,36 @@ export default function App() {
   }, [onViewRun]);
 
   const alertedStep = detail?.alerts?.[0]?.triggered_at_step ?? null;
+  const serverRootCauses = detail?.alerts?.[0]?.root_causes ?? [];
+  const topRootCause = serverRootCauses.length > 0 ? serverRootCauses[0] : null;
 
-  // Compute root-cause path by walking predecessors from the alerted step.
+  // Root-cause path: walk predecessors from the alerted step, then trim the
+  // chain to start at the server-ranked origin step (highest contribution
+  // share from localize_root_cause) when available.
   let rootCauseSteps: string[] = [];
   if (alertedStep && detail) {
     const predsById = new Map<string, string[]>();
     detail.nodes.forEach((n) => predsById.set(n.id, n.predecessors));
-    const path: string[] = [];
+    const chain: string[] = [];
     let cur: string | null = alertedStep;
     const visited = new Set<string>();
     while (cur && !visited.has(cur)) {
       visited.add(cur);
-      path.push(cur);
+      chain.push(cur);
       const ps: string[] = predsById.get(cur as string) || [];
       cur = ps.length > 0 ? ps[ps.length - 1] : null;
     }
-    rootCauseSteps = path;
+    const originIdx = topRootCause ? chain.indexOf(topRootCause.step_id) : -1;
+    rootCauseSteps = originIdx >= 0 ? chain.slice(originIdx) : chain;
   }
 
   const highlightedEdge = selectedNodeId
     ? detail?.edges.find((e) => e.src === selectedNodeId || e.dst === selectedNodeId)
     : undefined;
+
+  const rootCauseLabel = topRootCause
+    ? `${topRootCause.step_id} (share ${(topRootCause.share * 100).toFixed(0)}%)`
+    : detail?.alerts?.[0]?.root_cause_step || 'unknown';
 
   return (
     <div className="app">
@@ -97,9 +106,7 @@ export default function App() {
           <div className="mark">CG</div>
           <div>
             CascadeGuard
-            <span style={{ fontWeight: 400, fontSize: '0.85rem', color: '#94a3b8', marginLeft: '6px' }}>
-              Dashboard
-            </span>
+            <span className="brand-sub">Monitor</span>
           </div>
         </div>
         <nav className="app-nav">
@@ -114,11 +121,9 @@ export default function App() {
       </header>
 
       <div className="container">
-        <div id="tooltip" className="tooltip" />
-
         {view === 'runs' && (
           <section>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div className="runs-header">
               <h2>Pipeline Runs</h2>
               <button className="btn primary" onClick={() => showRuns()}>
                 ↻ Refresh
@@ -140,7 +145,7 @@ export default function App() {
             <div className="run-header">
               <div className="run-info">
                 <h1>
-                  Run <span style={{ color: '#63b3ed' }}>{detail.run_id}</span>
+                  Run <span className="run-id-accent">{detail.run_id}</span>
                 </h1>
                 <div className="meta">
                   Template: <span className="mono">{detail.run_record.pipeline_template_id || 'adhoc'}</span>
@@ -164,8 +169,7 @@ export default function App() {
                     Hallucination cascade detected at step &quot;{detail.alerts[0].triggered_at_step}&quot;
                   </h4>
                   <p>
-                    CUSUM S_n = {(detail.alerts[0].s_n_value ?? 0).toFixed(4)}. Root cause:
-                    {detail.alerts[0].root_cause_step || 'unknown'}.
+                    CUSUM S_n = {(detail.alerts[0].s_n_value ?? 0).toFixed(4)}. Root cause: {rootCauseLabel}.
                   </p>
                 </div>
               </div>
@@ -199,13 +203,13 @@ export default function App() {
             </div>
 
             <div className="tabs">
-              <button className="tab active" onClick={() => setActiveTabState('dag')}>
+              <button className={`tab ${activeTab === 'dag' ? 'active' : ''}`} onClick={() => setActiveTabState('dag')}>
                 DAG Visualization
               </button>
-              <button className="tab" onClick={() => setActiveTabState('scores')}>
+              <button className={`tab ${activeTab === 'scores' ? 'active' : ''}`} onClick={() => setActiveTabState('scores')}>
                 Scores Table
               </button>
-              <button className="tab" onClick={() => setActiveTabState('trace')}>
+              <button className={`tab ${activeTab === 'trace' ? 'active' : ''}`} onClick={() => setActiveTabState('trace')}>
                 Trace / Steps
               </button>
             </div>
@@ -224,7 +228,7 @@ export default function App() {
                   />
                 </div>
               </div>
-              <div className="card" style={{ marginTop: 0 }}>
+              <div className="card inspector-card">
                 <h3>Node Inspector</h3>
                 <p className="text-xs">Click a node in the DAG to inspect its scores and root-cause path.</p>
                 <NodeInspector
@@ -256,14 +260,14 @@ export default function App() {
                       const chaf = n.chaf != null ? n.chaf.toFixed(4) : '—';
                       const hc = n.h_cascade != null ? n.h_cascade.toFixed(4) : '—';
                       const se = n.se != null ? n.se.toFixed(4) : '—';
-                      const H = n.H != null ? n.H.toFixed(4) : '—';
+                      const H = n.H != null ? n.H.toFixed(4) : 'n/a';
                       const cls = n.chrs != null && n.chrs >= 0.6 ? 'text-red' : n.chrs != null && n.chrs >= 0.3 ? 'text-yellow' : 'text-green';
                       return (
-                        <tr key={n.id} onClick={() => setSelectedNodeId(n.id)} className="clickable" style={{ cursor: 'pointer' }}>
+                        <tr key={n.id} onClick={() => setSelectedNodeId(n.id)} className="clickable">
                           <td><span className="mono">{n.id}</span></td>
                           <td>{n.kind}</td>
                           <td>{n.depth}</td>
-                          <td>{H}</td>
+                          <td title={n.H == null ? 'no retrieval context for this step (Eq. 3 needs R(s_i))' : undefined}>{H}</td>
                           <td className={cls}>{hc}</td>
                           <td className={cls}>{chaf}</td>
                           <td className={cls}>{chrs}</td>
@@ -309,7 +313,7 @@ export default function App() {
           </section>
         )}
 
-        {loading && view === 'runDetail' && !detail && <div className="loading">Loading run…</div>}
+        {loading && view === 'runDetail' && !detail && <div className="loading">Loading run</div>}
       </div>
     </div>
   );

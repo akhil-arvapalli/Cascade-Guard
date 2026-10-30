@@ -16,7 +16,7 @@ export function NodeInspector({ node, rootCauseSteps }: NodeInspectorProps) {
   const chaf = node.chaf != null ? node.chaf.toFixed(4) : '—';
   const hc = node.h_cascade != null ? nH(node.h_cascade) : '—';
   const se = node.se != null ? node.se.toFixed(4) : '—';
-  const H = node.H != null ? node.H.toFixed(4) : '—';
+  const H = node.H != null ? node.H.toFixed(4) : 'n/a';
   const cls = node.chrs != null && node.chrs >= 0.6 ? 'text-red' : node.chrs != null && node.chrs >= 0.3 ? 'text-yellow' : 'text-green';
   const isRootCause = rootCauseSteps.includes(node.id);
 
@@ -29,7 +29,7 @@ export function NodeInspector({ node, rootCauseSteps }: NodeInspectorProps) {
         <div className="k">Depth</div>
         <div className="v">{node.depth}</div>
         <div className="k">H (faithfulness)</div>
-        <div className="v">{H}</div>
+        <div className="v" title={node.H == null ? 'no retrieval context for this step (Eq. 3 needs R(s_i))' : undefined}>{H}</div>
         <div className="k">H_cascade</div>
         <div className="v">{hc}</div>
         <div className="k">CHAF</div>
@@ -45,19 +45,17 @@ export function NodeInspector({ node, rootCauseSteps }: NodeInspectorProps) {
         <div className="k">Root Cause Path</div>
         <div className="v">{isRootCause ? 'YES — on path to alerted step' : 'no'}</div>
       </div>
-      <div style={{ marginTop: 12 }}>
-        <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 6 }}>Output</div>
-        <div className="mono output-box">{escapeHtml(node.output || '')}</div>
-      </div>
+      <div className="section-label">Output</div>
+      <div className="mono output-box">{escapeHtml(node.output || '')}</div>
       {node.retrieved_docs && node.retrieved_docs.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: 6 }}>Retrieved Docs</div>
+        <>
+          <div className="section-label">Retrieved Docs</div>
           {node.retrieved_docs.map((d, i) => (
-            <div key={i} style={{ fontSize: '0.85rem', color: '#cbd5e1', marginBottom: 4 }}>
+            <div key={i} className="doc-row">
               <span className="mono">{d.doc_id}:</span> {escapeHtml(d.content)}
             </div>
           ))}
-        </div>
+        </>
       )}
     </div>
   );

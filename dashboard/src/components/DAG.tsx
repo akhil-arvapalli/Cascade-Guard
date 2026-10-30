@@ -70,12 +70,8 @@ export function DAG({
       <svg ref={svgRef} className="dag" width={dims.w} height={Math.max(dims.h, depths.length * 120 + 120)}>
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#475569" />
+            <polygon points="0 0, 10 3.5, 0 7" fill="#2c2c29" />
           </marker>
-          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
         </defs>
         <g id="dag-edges">
           {edges.map((e) => {
@@ -96,6 +92,7 @@ export function DAG({
                   x2={d.x + NODE_W / 2}
                   y2={d.y}
                   className={cls}
+                  markerEnd="url(#arrowhead)"
                   data-src={e.src}
                   data-dst={e.dst}
                 />
@@ -104,7 +101,7 @@ export function DAG({
                   y={(s.y + d.y) / 2 - 10}
                   textAnchor="middle"
                   fontSize="9"
-                  fill={isPath ? '#f59e0b' : '#6b7280'}
+                  className={isPath ? 'edge-alpha path' : 'edge-alpha'}
                   pointerEvents="none"
                 >
                   α={alpha}
@@ -152,19 +149,13 @@ export function DAG({
                   if (tt) tt.classList.remove('visible');
                 }}
               >
-                <rect width={NODE_W} height={NODE_H} rx="6" ry="6" />
-                <text x="10" y="22" fontSize="10" fill="#9ca3af" className="node-id">{n.id}</text>
-                <text x="10" y="38" fontSize="10" fill="#9ca3af">{`${n.kind} • depth ${n.depth}`}</text>
-                <text
-                  x="10"
-                  y="56"
-                  fontSize="13"
-                  fill={cls === 'high' ? '#f87171' : cls === 'med' ? '#fbbf24' : '#4ade80'}
-                  fontWeight="600"
-                >
+                <rect width={NODE_W} height={NODE_H} />
+                <text x="10" y="22" fontSize="10" className="node-id">{n.id}</text>
+                <text x="10" y="38" fontSize="10" className="node-meta">{`${n.kind} • depth ${n.depth}`}</text>
+                <text x="10" y="56" fontSize="13" className={`chrs-val ${cls}`}>
                   CHRS {chrs.toFixed(3)}
                 </text>
-                <text x="10" y="72" fontSize="9" fill="#6b7280">
+                <text x="10" y="72" fontSize="9" className="node-meta">
                   {`H_c=${hc} CHAF=${chaf} SE=${se} • ${n.fidelity}`}
                 </text>
               </g>

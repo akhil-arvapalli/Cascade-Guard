@@ -33,12 +33,19 @@ export interface Edge {
   alpha_method: string | null;
 }
 
+export interface RootCauseShare {
+  step_id: string;
+  share: number;
+  path_length: number;
+}
+
 export interface AlertRecord {
   alert_id: string;
   run_id: string;
   triggered_at_step: string;
   s_n_value: number;
   root_cause_step: string | null;
+  root_causes?: RootCauseShare[];
   created_at: number;
 }
 
@@ -69,8 +76,10 @@ export interface RunDetail {
 }
 
 export const api = {
-  listRuns: () => json('/runs') as Promise<{ runs: RunSummary[] }>,
-  getRun: (runId: string) => json(`/runs/${runId}`) as Promise<RunDetail>,
+  listRuns: () => json('/v1/runs') as Promise<{ runs: RunSummary[] }>,
+  getRun: (runId: string) => json(`/v1/runs/${runId}`) as Promise<RunDetail>,
   listAlerts: (runId?: string) =>
-    json(`/alerts${runId ? `?run_id=${encodeURIComponent(runId)}` : ''}`) as Promise<{ alerts: AlertRecord[] }>,
+    json(`/v1/alerts${runId ? `?run_id=${encodeURIComponent(runId)}` : ''}`) as Promise<{
+      alerts: AlertRecord[];
+    }>,
 };

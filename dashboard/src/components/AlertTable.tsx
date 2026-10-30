@@ -40,7 +40,7 @@ export function AlertTable({ runId }: { runId?: string }) {
         </thead>
         <tbody>
           {alerts.map((a) => (
-            <tr key={a.alert_id} className="clickable" onClick={() => runId && window.dispatchEvent(new CustomEvent('viewRun', { detail: a.run_id }))}>
+            <tr key={a.alert_id} className="clickable" onClick={() => window.dispatchEvent(new CustomEvent('viewRun', { detail: a.run_id }))}>
               <td><span className="mono">{a.alert_id}</span></td>
               <td><span className="mono">{a.run_id}</span></td>
               <td><span className="mono">{a.triggered_at_step}</span></td>
