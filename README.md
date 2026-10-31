@@ -329,6 +329,40 @@ Root-cause localization (a practical necessity the paper doesn't fully spec, but
 
 ---
 
+## Quickstart — run it in 3 commands
+
+```bash
+pip install -e ".[dev]"
+python scripts/calibrate.py     # CUSUM μ0/σ from clean traces → data/calibration.json (once; reloaded every boot)
+python demo.py --serve          # seeded clean + cascading runs → http://127.0.0.1:8000/dashboard
+```
+
+Daily workflow commands (all runnable without external services; Postgres/Redis optional via `docker compose up -d`):
+
+```bash
+python demo.py [--serve] [--report demo_output.md]   # executable demo: clean run + Fig.1 cascade + dataset slice
+uvicorn api.main:app                                 # API + dashboard (dist built via: cd dashboard && npm run build)
+pytest -q                                            # full test suite (incl. Theorem 1 invariant, ARL0 simulation)
+ruff check . && black --check core sdk api storage eval tests && mypy   # quality gates (CI parity)
+
+# operations
+python -m eval.run_eval                              # Theorem-1 sweep, ARL0 simulation, Fig.1 amplification
+python -m eval.loadtest.load_test --scenario cheap_check --concurrency 10 --requests 100
+python jobs/refresh.py --base-url http://127.0.0.1:8000 --loop 86400 --use-history --use-measured-costs
+
+# placement / calibration / blocking endpoints
+curl -X POST localhost:8000/v1/placement/refresh -H "Content-Type: application/json" \
+     -d '{"template_id": "paper_fig1", "use_history": true}'
+curl -X POST localhost:8000/v1/decision/<run_id>/<step_id> -H "Content-Type: application/json" \
+     -d '{"output": "...", "retrieved_docs": [{"doc_id": "d1", "content": "..."}], "predecessors": ["s1"]}'
+```
+
+In-band blocking (Phase 12): `POST /v1/decision/{run_id}/{step_id}` returns `block: true/false` by projecting one CUSUM step from the run's accumulated S_n without advancing it — set `blocking.mode: "block"` (+ optional `threshold_tau`) in `configs/default.yaml` to enforce.
+
+Evaluation (Phase 14): `python -m eval.run_detection_eval` runs the head-to-head vs. the single-step baseline on the committed HaluEval-RAG sample slice and writes `eval/results/detection_eval.json`; results live in `EVAL_REPORT.md`.
+
+---
+
 ## 6. Evaluation plan (reproducing the paper's claims)
 
 The paper claims **34.7% reduction in undetected cascading failures** vs. the best single-step baseline, at **12ms latency overhead per step**, evaluated on **HaluEval-RAG, RAGTruth, and AgentHallu**. To validate the implementation:
