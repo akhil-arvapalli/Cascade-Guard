@@ -64,10 +64,17 @@ What this locks in, what it makes harder later, what would need to change if thi
 **Consequences** — Persistence is per-process until Postgres is stood up; no silent divergence — both implement the same TraceRepository protocol.
 
 ### D-001..D-004 remain UNDECIDED (unchanged)
-λ sweep, α track production default, embedding model, Kafka migration — all still require the evidence described below.
+λ sweep, α track production default, embedding model, Kafka migration — all still require the evidence described below. *(2026-10-31: D-001 now carries a PROVISIONAL sample-scale value — see its entry; it is not a production decision.)*
 
-### D-001: λ (lambda) value for CHRS risk combiner — **NOT YET DECIDED**
+### D-001: λ (lambda) value for CHRS risk combiner — **PROVISIONAL (sample-scale, 2026-10-31)**
 Per README §6 / TODO Phase 14, this requires an actual cross-validation sweep on held-out data, not a guess. Log the winning value and the sweep results (or a link to the eval report) here once resolved.
+
+**2026-10-31 entry (Phase 14 small-scale eval, agent session) — PROVISIONAL, sample-scale:**
+- **Winning λ = 0.2**, picked by grid sweep (0.0–1.0 step 0.1) maximizing detection F1 on the tuning split (106 traces, stratified, seed 20261031) of the committed HaluEval-RAG sample (`eval/datasets/data/halu_eval_rag_sample.json`), with the fixed alert rule max CHRS > κ = μ0 + δ/2 from `data/calibration.json`.
+- **Tuning F1 = 0.6667 (precision 0.5, recall 1.0, FAR 1.0); held-out identical (n=44).** Crucially, λ ∈ [0.2, 1.0] sits on an IDENTICAL F1 plateau — λ is effectively **not identifiable** on this slice; 0.2 is just the lowest grid point reaching the plateau (deterministic tie-break).
+- **Why degenerate:** with SE=0 and the 3-step HaluEval trace (upstream H ≡ 0 by construction), CHRS = λ·H(s3), so the sweep is a threshold sweep in disguise; and the hashing embedder (D-005) makes per-step H INVERTED on this slice (mean H 0.46 on hallucinated vs 0.72 on right — short gold entities vs knowledge-copied hallucination sentences), so the F1-optimal operating point is "alert on everything".
+- **Consequences:** `configs/default.yaml` is deliberately left at the placeholder λ=0.6 — 0.2 must NOT be baked in from this run. Re-sweep with a semantic embedder + real entailment/SE (V2-1) on richer traces; only that can break the plateau.
+- Evidence: `eval/results/detection_eval.json`, EVAL_REPORT.md §3/§4/§8, `eval/run_detection_eval.py`.
 
 ### D-002: Production default track for α_ij (propagation coefficient) — **NOT YET DECIDED**
 Track A (attention-based, exact, needs self-hosted open-weight model) vs. Track B (NLI/counterfactual surrogate, works with closed APIs). This is a real architecture decision — depends on whether the target deployment can host its own model or is stuck behind a closed API. Log the reasoning and the Track A/B correlation data from Phase 3 here once decided.

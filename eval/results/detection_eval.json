@@ -1,0 +1,510 @@
+{
+  "meta": {
+    "date": "2026-10-31",
+    "phase": "TODO Phase 14 (small-scale real-dataset eval)",
+    "sample": {
+      "path": "eval\\datasets\\data\\halu_eval_rag_sample.json",
+      "source": "RUCAIBox/HaluEval data/qa_data.json (HaluEval QA / RAG split)",
+      "url": "https://raw.githubusercontent.com/RUCAIBox/HaluEval/main/data/qa_data.json",
+      "license": "see repo (CC BY-NC-SA)",
+      "n_records": 150,
+      "note": "Upstream no longer ships data/halu_eval_rag.json (404 on master and main, verified 2026-10-31); qa_data.json is the same official 10K-record HotpotQA-based split with the identical schema. See the sample header provenance_note and eval/datasets/make_halu_sample.py."
+    },
+    "split": {
+      "seed": 20261031,
+      "train_frac": 0.7,
+      "tuning": {
+        "n": 106,
+        "pos": 53,
+        "neg": 53
+      },
+      "held_out": {
+        "n": 44,
+        "pos": 22,
+        "neg": 22
+      }
+    },
+    "engine": {
+      "embedder": "HashingEmbedder(dim=256) - lexical char-trigram placeholder (D-005)",
+      "entail_fn": "cosine similarity surrogate (replicated from api/main.build_engine; D-002 open)",
+      "semantic_entropy": 0,
+      "alpha_track": "nli_proxy",
+      "trace_shape": "s1 retrieve -> s2 reason -> s3 synthesize; label on s3"
+    },
+    "output_path": "eval\\results\\detection_eval.json"
+  },
+  "alert_rule": {
+    "cascade": "trace alerts iff max CHRS over steps > kappa",
+    "kappa": 0.025975,
+    "kappa_formula": "mu0 + delta/2 (mirrors CusumDetector, Eq. 11)",
+    "kappa_source": "data\\calibration.json (calibrated on synthetic-clean CHRS)",
+    "comparison": "strict > (same strictness as CusumDetector.update)",
+    "note": "CHRS = lambda*H_cascade (SE=0), so a FIXED kappa acts as a per-lambda shifted threshold: the effective cutoff in H_cascade units is kappa/lambda."
+  },
+  "lambda_sweep": [
+    {
+      "lambda": 0.0,
+      "kappa": 0.025975,
+      "tp": 0,
+      "fp": 0,
+      "tn": 53,
+      "fn": 53,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "false_alarm_rate": 0.0,
+      "mean_latency_ms": 2.825
+    },
+    {
+      "lambda": 0.1,
+      "kappa": 0.025975,
+      "tp": 51,
+      "fp": 53,
+      "tn": 0,
+      "fn": 2,
+      "precision": 0.4904,
+      "recall": 0.9623,
+      "f1": 0.6497,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.778
+    },
+    {
+      "lambda": 0.2,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.784
+    },
+    {
+      "lambda": 0.3,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.858
+    },
+    {
+      "lambda": 0.4,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.735
+    },
+    {
+      "lambda": 0.5,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.764
+    },
+    {
+      "lambda": 0.6,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.763
+    },
+    {
+      "lambda": 0.7,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.827
+    },
+    {
+      "lambda": 0.8,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.758
+    },
+    {
+      "lambda": 0.9,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 2.887
+    },
+    {
+      "lambda": 1.0,
+      "kappa": 0.025975,
+      "tp": 53,
+      "fp": 53,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "mean_latency_ms": 3.05
+    }
+  ],
+  "chosen_lambda": 0.2,
+  "chosen_lambda_metrics_tuning": {
+    "lambda": 0.2,
+    "kappa": 0.025975,
+    "tp": 53,
+    "fp": 53,
+    "tn": 0,
+    "fn": 0,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.6667,
+    "false_alarm_rate": 1.0,
+    "mean_latency_ms": 2.784
+  },
+  "baseline_threshold_tuning": {
+    "best_threshold": 0.0,
+    "curve": [
+      {
+        "threshold": 0.0,
+        "tp": 53,
+        "fp": 53,
+        "tn": 0,
+        "fn": 0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6667,
+        "false_alarm_rate": 1.0
+      },
+      {
+        "threshold": 0.05,
+        "tp": 53,
+        "fp": 53,
+        "tn": 0,
+        "fn": 0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6667,
+        "false_alarm_rate": 1.0
+      },
+      {
+        "threshold": 0.1,
+        "tp": 53,
+        "fp": 53,
+        "tn": 0,
+        "fn": 0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6667,
+        "false_alarm_rate": 1.0
+      },
+      {
+        "threshold": 0.15,
+        "tp": 53,
+        "fp": 53,
+        "tn": 0,
+        "fn": 0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6667,
+        "false_alarm_rate": 1.0
+      },
+      {
+        "threshold": 0.2,
+        "tp": 51,
+        "fp": 53,
+        "tn": 0,
+        "fn": 2,
+        "precision": 0.4904,
+        "recall": 0.9623,
+        "f1": 0.6497,
+        "false_alarm_rate": 1.0
+      },
+      {
+        "threshold": 0.25,
+        "tp": 51,
+        "fp": 53,
+        "tn": 0,
+        "fn": 2,
+        "precision": 0.4904,
+        "recall": 0.9623,
+        "f1": 0.6497,
+        "false_alarm_rate": 1.0
+      },
+      {
+        "threshold": 0.3,
+        "tp": 50,
+        "fp": 53,
+        "tn": 0,
+        "fn": 3,
+        "precision": 0.4854,
+        "recall": 0.9434,
+        "f1": 0.641,
+        "false_alarm_rate": 1.0
+      },
+      {
+        "threshold": 0.35,
+        "tp": 42,
+        "fp": 52,
+        "tn": 1,
+        "fn": 11,
+        "precision": 0.4468,
+        "recall": 0.7925,
+        "f1": 0.5714,
+        "false_alarm_rate": 0.9811
+      },
+      {
+        "threshold": 0.4,
+        "tp": 40,
+        "fp": 52,
+        "tn": 1,
+        "fn": 13,
+        "precision": 0.4348,
+        "recall": 0.7547,
+        "f1": 0.5517,
+        "false_alarm_rate": 0.9811
+      },
+      {
+        "threshold": 0.45,
+        "tp": 34,
+        "fp": 52,
+        "tn": 1,
+        "fn": 19,
+        "precision": 0.3953,
+        "recall": 0.6415,
+        "f1": 0.4892,
+        "false_alarm_rate": 0.9811
+      },
+      {
+        "threshold": 0.5,
+        "tp": 20,
+        "fp": 49,
+        "tn": 4,
+        "fn": 33,
+        "precision": 0.2899,
+        "recall": 0.3774,
+        "f1": 0.3279,
+        "false_alarm_rate": 0.9245
+      },
+      {
+        "threshold": 0.55,
+        "tp": 9,
+        "fp": 43,
+        "tn": 10,
+        "fn": 44,
+        "precision": 0.1731,
+        "recall": 0.1698,
+        "f1": 0.1714,
+        "false_alarm_rate": 0.8113
+      },
+      {
+        "threshold": 0.6,
+        "tp": 5,
+        "fp": 40,
+        "tn": 13,
+        "fn": 48,
+        "precision": 0.1111,
+        "recall": 0.0943,
+        "f1": 0.102,
+        "false_alarm_rate": 0.7547
+      },
+      {
+        "threshold": 0.65,
+        "tp": 3,
+        "fp": 34,
+        "tn": 19,
+        "fn": 50,
+        "precision": 0.0811,
+        "recall": 0.0566,
+        "f1": 0.0667,
+        "false_alarm_rate": 0.6415
+      },
+      {
+        "threshold": 0.7,
+        "tp": 1,
+        "fp": 29,
+        "tn": 24,
+        "fn": 52,
+        "precision": 0.0333,
+        "recall": 0.0189,
+        "f1": 0.0241,
+        "false_alarm_rate": 0.5472
+      },
+      {
+        "threshold": 0.75,
+        "tp": 0,
+        "fp": 26,
+        "tn": 27,
+        "fn": 53,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "false_alarm_rate": 0.4906
+      },
+      {
+        "threshold": 0.8,
+        "tp": 0,
+        "fp": 17,
+        "tn": 36,
+        "fn": 53,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "false_alarm_rate": 0.3208
+      },
+      {
+        "threshold": 0.85,
+        "tp": 0,
+        "fp": 14,
+        "tn": 39,
+        "fn": 53,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "false_alarm_rate": 0.2642
+      },
+      {
+        "threshold": 0.9,
+        "tp": 0,
+        "fp": 12,
+        "tn": 41,
+        "fn": 53,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "false_alarm_rate": 0.2264
+      },
+      {
+        "threshold": 0.95,
+        "tp": 0,
+        "fp": 7,
+        "tn": 46,
+        "fn": 53,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "false_alarm_rate": 0.1321
+      },
+      {
+        "threshold": 1.0,
+        "tp": 0,
+        "fp": 0,
+        "tn": 53,
+        "fn": 53,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "false_alarm_rate": 0.0
+      }
+    ]
+  },
+  "head_to_head": {
+    "held_out_n": 44,
+    "held_out_pos": 22,
+    "held_out_neg": 22,
+    "cascadeguard": {
+      "tp": 22,
+      "fp": 22,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "threshold": 0.025975,
+      "mean_latency_ms": 2.844,
+      "p95_latency_ms": 4.296
+    },
+    "single_step_h_baseline": {
+      "tp": 22,
+      "fp": 22,
+      "tn": 0,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6667,
+      "false_alarm_rate": 1.0,
+      "threshold": 0.0,
+      "mean_latency_ms": 1.814,
+      "p95_latency_ms": 3.153
+    },
+    "undetected_rate_reduction_vs_baseline": 0.0
+  },
+  "per_step_H_breakdown": {
+    "s3_synthesize": {
+      "hallucinated": {
+        "mean": 0.4603,
+        "std": 0.1217,
+        "n": 75
+      },
+      "right": {
+        "mean": 0.7179,
+        "std": 0.1623,
+        "n": 75
+      },
+      "gap_mean": -0.2576,
+      "interpretation": "H(hallucinated) < H(right): under the flag-if-H>threshold semantics the raw signal is INVERTED on this slice - a length/verbatim-reuse artifact of the hashing embedder (short gold-entity answers vs sentence-form hallucinations copied from the knowledge). See caveats."
+    },
+    "s1_retrieve": {
+      "mean": 0.0,
+      "std": 0.0,
+      "n": 150
+    },
+    "s2_reason": {
+      "undefined_no_context": 150,
+      "note": "H undefined (no retrieved docs) for every trace - treated as not applicable, never 0"
+    }
+  },
+  "chaf_check": {
+    "traces": 150,
+    "violations": 0,
+    "max_chaf_over_bound": 1.0,
+    "lambda_used": 0.2
+  },
+  "caveats": [
+    "HONESTY FRAME: hashing char-trigram embedder (D-005) measures lexical overlap, not semantic faithfulness; absolute numbers are modest and NOT the paper's claim.",
+    "entail_fn is a cosine surrogate, not a real NLI model (D-002 open); SE=0 (no generate_fn wired), so CHRS = lambda*H_cascade exactly.",
+    "Trace construction gives zero upstream risk: s1 echoes its only document (H=0) and s2 has no retrieved context (H undefined -> 0 in the cascade), so H_cascade(s3) == H(s3) and the pipeline-aware pathway adds NO signal on this slice. The head-to-head validates the harness and thresholding, not the paper's cascade-amplification advantage.",
+    "H on this slice partially confounds answer LENGTH with hallucination: gold answers are short entities while hallucinated answers are sentences, which inflates the H gap under a lexical embedder.",
+    "Sample-scale: 150 of 10,000 records (106 tuning / 44 held-out); wide confidence intervals, numbers are provisional.",
+    "kappa comes from calibration on synthetic-clean CHRS, not this dataset's clean traces; per-lambda thresholding is fixed rather than recalibrated."
+  ]
+}
