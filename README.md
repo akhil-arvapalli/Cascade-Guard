@@ -349,6 +349,7 @@ ruff check . && black --check core sdk api storage eval tests && mypy   # qualit
 python -m eval.run_eval                              # Theorem-1 sweep, ARL0 simulation, Fig.1 amplification
 python -m eval.loadtest.load_test --scenario cheap_check --concurrency 10 --requests 100
 python jobs/refresh.py --base-url http://127.0.0.1:8000 --loop 86400 --use-history --use-measured-costs
+python -m api.worker                     # async ingestion worker (requires ingestion.mode=redis_stream + Redis)
 
 # placement / calibration / blocking endpoints
 curl -X POST localhost:8000/v1/placement/refresh -H "Content-Type: application/json" \

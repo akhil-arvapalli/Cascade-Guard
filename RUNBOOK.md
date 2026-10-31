@@ -121,3 +121,7 @@ non-committed file both work).
 `logging.level: INFO`): timestamp, level, logger, message + extras. Every
 request logs `method`/`path`/`status`/`ms` at INFO. The root logger is never
 reconfigured, so uvicorn's own logging is untouched.
+
+## Run lifecycle
+
+See AGENTS.md 2026-10-31 entry: runs marked completed/alerted on analyze; worker path GCs detectors; async ingestion via POST /v1/ingest + python -m api.worker.

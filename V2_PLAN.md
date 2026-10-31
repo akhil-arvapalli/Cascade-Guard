@@ -78,9 +78,10 @@ persistence real and closes Phase 0's never-executed exit criterion.
       writes it yet); use for eval-side similar-trace inspection.
 - [ ] **CUSUM state durability**: persist per-step S_n updates (not just final),
       restore a detector mid-run after restart; round-trip test.
-- [ ] **Lifecycle wiring**: `pool.complete(run_id)` called on run completion in
-      the API; runs marked completed/alerted in `pipeline_runs`; orphan cleanup
-      job for crashed runs.
+- [x] **Lifecycle wiring**: runs marked completed/alerted on inline `/analyze`;
+      worker path (`api/worker.py`) calls `pool.complete(run_id)` on run_end (the
+      inline path keeps the detector pooled for post-analysis blocking decisions
+      — documented trade-off; orphan cleanup = pending-message redelivery).
 - [ ] **In-band blocking mode** (TODO Phase 12 leftover): decision endpoint the
       agent calls synchronously — "block this step?" — with configurable
       threshold policy separate from notify-only alerting.

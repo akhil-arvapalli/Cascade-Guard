@@ -152,9 +152,9 @@ This phase has two independent tracks — do not treat Track B as "good enough, 
 ## Phase 11 — Core Engine service + API
 
 - [x] Stand up FastAPI app (`api/main.py`)
-- [ ] Implement trace ingestion endpoint (`/ingest`) consuming from Redis Streams
+- [x] Implement trace ingestion endpoint (`/ingest`) consuming from Redis Streams *(POST /v1/ingest validates against the api/streaming.py contract and XADDs; 503 unless ingestion.mode=redis_stream)*
 - [x] Implement synchronous "cheap check" endpoint the agent can call inline (cache-backed, must hit the <12ms/step target)
-- [ ] Implement async full-pipeline analysis worker (consumes queue, runs full scoring pipeline, writes to Postgres)
+- [x] Implement async full-pipeline analysis worker (consumes queue, runs full scoring pipeline, writes to Postgres) *(api/worker.py consumer-group worker: buffers steps per run, analyzes on run_end, persists, dispatches, completes run; dead-letters malformed payloads; scale via extra workers)*
 - [x] Implement `/calibration` endpoints (trigger CUSUM calibration, trigger monitor-placement refresh)
 - [x] Implement `/alerts` endpoints (list, acknowledge, webhook registration)
 - [x] Load test: confirm the sync cheap-check path holds the latency budget under realistic concurrent load *(harness: `python -m eval.loadtest.load_test --scenario cheap_check|full_pipeline`; first measured run: cheap_check p50 5.0ms / p95 33ms (cold-pool warmup), analyze p50 7.0ms, 0 errors @ concurrency 10 — steady-state within the 12ms budget; warm-server re-run for published numbers is a V2-2 item)*
