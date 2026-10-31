@@ -53,3 +53,12 @@ CREATE TABLE IF NOT EXISTS alerts (
     root_cause_step TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Single-row CUSUM calibration store (V2-3): `id` is a constant TRUE so the
+-- table can never hold more than one calibration (CHECK enforces it).
+CREATE TABLE IF NOT EXISTS calibration (
+    id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+    mu0 DOUBLE PRECISION NOT NULL,
+    sigma DOUBLE PRECISION NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

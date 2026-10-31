@@ -38,6 +38,7 @@ class TraceRepository(Protocol):
     def insert_alert(self, alert: AlertRecord) -> None: ...
     def list_alerts(self, run_id: str | None = None) -> list[AlertRecord]: ...
     def get_run(self, run_id: str) -> dict[str, Any] | None: ...
+    def list_runs(self) -> list[dict[str, Any]]: ...
 
 
 def _now() -> float:
@@ -106,9 +107,19 @@ class InMemoryTraceRepository:
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         return self._runs.get(run_id)
 
+    def list_runs(self) -> list[dict[str, Any]]:
+        """All run records, newest first (started_at desc)."""
+        runs = [dict(record) for record in self._runs.values()]
+        runs.sort(key=lambda r: r.get("started_at") or 0, reverse=True)
+        return runs
 
-def make_postgres_repository() -> Any:
-    """Driver-guarded factory: fails loudly if [postgres] extra not installed."""
+
+def make_postgres_repository(dsn: str | None = None) -> Any:
+    """Driver-guarded factory: fails loudly if [postgres] extra not installed.
+
+    `dsn` is passed through to PostgresTraceRepository (falls back to
+    $CASCADEGUARD_PG_DSN there when omitted).
+    """
     try:
         import psycopg  # noqa: F401
     except ImportError as exc:
@@ -118,4 +129,4 @@ def make_postgres_repository() -> Any:
         ) from exc
     from storage.postgres_impl import PostgresTraceRepository
 
-    return PostgresTraceRepository()
+    return PostgresTraceRepository(dsn=dsn)

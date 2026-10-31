@@ -50,7 +50,8 @@ def _edge_json(src: str, dst: str, result: AnalysisResult) -> dict[str, Any]:
 def list_runs(request: Request) -> dict[str, Any]:
     repo = request.app.state.repository
     runs = []
-    for run_id, record in repo._runs.items():  # noqa: SLF001 — in-memory impl
+    for record in repo.list_runs():
+        run_id = str(record.get("run_id"))
         result = request.app.state.results.get(run_id)
         runs.append(
             {
