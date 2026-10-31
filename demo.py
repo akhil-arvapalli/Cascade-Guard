@@ -121,8 +121,14 @@ def _sample_dataset_section(client: Any, max_traces: int = 6) -> None:
     kappa = engine.cusum_params.mu0 + engine.cusum_params.delta / 2
     print(f"  alert rule: max CHRS > κ = {kappa:.4f} (calibrated)\n")
 
+    # balanced slice: half faithful, half hallucinated (the stratified file
+    # groups by label, so a naive [:6] would show only one class)
+    hall = [t for t in traces if next(iter(t.labels.values()), False)]
+    faith = [t for t in traces if not next(iter(t.labels.values()), False)]
+    half = max_traces // 2
+    picked = (faith[:half] + hall[:half])[:max_traces]
+
     rows: list[tuple[str, str, float, str]] = []
-    picked = traces[:max_traces]
     for i, labeled in enumerate(picked):
         labels = labeled.labels
         truth = next(iter(labels.values())) if labels else False
