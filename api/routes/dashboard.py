@@ -6,6 +6,7 @@ visualization, alert drill-down, and aggregate metrics.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -136,3 +137,79 @@ def list_all_alerts(request: Request, run_id: str | None = None) -> dict[str, An
             for a in records
         ],
     }
+
+
+# --- Phase 14 eval summary (the 150-trace HaluEval sample) ------------------
+
+def _eval_cache(request: Request) -> dict[str, Any]:
+    cache = getattr(request.app.state, "eval_cache", None)
+    if cache is None:
+        cache = {}
+        request.app.state.eval_cache = cache
+    return cache
+
+
+@router.get("/eval/summary")
+def eval_summary(request: Request) -> dict[str, Any]:
+    """Aggregate results of the Phase 14 sample-dataset evaluation.
+
+    Reads eval/results/ artifacts (written by eval/run_detection_eval.py and
+    the figure scripts); 404 if the eval has not been run in this checkout.
+    """
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[2]
+    results = repo_root / "eval" / "results"
+    try:
+        det = json.loads((results / "detection_eval.json").read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "eval results not found; run python -m eval.run_detection_eval") from exc
+    stats = {}
+    try:
+        stats = json.loads((results / "figs" / "fig_stats.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        pass
+    return {
+        "dataset": det.get("dataset", {"name": "halu_eval_rag_sample", "records": 150}),
+        "lambda_sweep": det.get("lambda_sweep", []),
+        "head_to_head": det.get("head_to_head", []),
+        "theorem1": det.get("theorem1", det.get("chaf_check", {})),
+        "latency": stats,
+        "figures": [f"/dashboard/figs/{n}" for n in (
+            "fig_latency.png", "fig_chaf_depth.png", "fig_h_distribution.png", "fig_lambda_sweep.png"
+        )],
+    }
+
+
+@router.get("/eval/samples")
+def eval_samples(request: Request) -> dict[str, Any]:
+    """Per-sample verdicts for all 150 labeled traces (computed once, cached)."""
+    cache = _eval_cache(request)
+    if "samples" in cache:
+        return {"kappa": cache["kappa"], "count": len(cache["samples"]), "samples": cache["samples"]}
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[2]
+    data = repo_root / "eval" / "datasets" / "data" / "halu_eval_rag_sample.json"
+    if not data.is_file():
+        raise HTTPException(404, "sample dataset not found")
+    from eval.datasets.loaders import load_halu_eval_rag_sample
+
+    engine = request.app.state.engine
+    kappa = engine.cusum_params.mu0 + engine.cusum_params.delta / 2
+    rows = []
+    for i, labeled in enumerate(load_halu_eval_rag_sample(data)):
+        truth = bool(next(iter(labeled.labels.values()), False))
+        result = engine.analyze_run(labeled.graph)
+        max_chrs = max(result.chrs.values()) if result.chrs else 0.0
+        predicted = max_chrs > kappa
+        rows.append({
+            "sample": f"sample-{i}",
+            "truth": "hallucinated" if truth else "faithful",
+            "max_chrs": round(max_chrs, 4),
+            "predicted": "hallucinated" if predicted else "faithful",
+            "match": predicted == truth,
+        })
+    cache["samples"] = rows
+    cache["kappa"] = round(kappa, 4)
+    return {"kappa": cache["kappa"], "count": len(rows), "samples": rows}

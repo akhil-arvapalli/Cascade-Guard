@@ -5,8 +5,9 @@ import { RunTable } from './components/RunTable';
 import { AlertTable } from './components/AlertTable';
 import { DAG } from './components/DAG';
 import { NodeInspector } from './components/NodeInspector';
+import { EvalPanel } from './components/EvalPanel';
 
-type View = 'runs' | 'alerts' | 'runDetail';
+type View = 'runs' | 'alerts' | 'runDetail' | 'eval';
 
 export default function App() {
   const [view, setView] = useState<View>('runs');
@@ -116,6 +117,9 @@ export default function App() {
           <a href="#" className={view === 'alerts' ? 'active' : ''} onClick={(e) => { e.preventDefault(); showAlerts(); }}>
             Alerts
           </a>
+          <a href="#" className={view === 'eval' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setView('eval'); setRunId(null); setDetail(null); setSelectedNodeId(null); }}>
+            Eval Sample
+          </a>
           <a href="/docs" target="_blank" rel="noopener noreferrer">API Docs</a>
         </nav>
       </header>
@@ -139,6 +143,8 @@ export default function App() {
             <AlertTable />
           </section>
         )}
+
+        {view === 'eval' && <EvalPanel />}
 
         {view === 'runDetail' && detail && (
           <section>
