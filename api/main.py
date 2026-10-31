@@ -253,6 +253,22 @@ def create_app(
     app.state.run_graphs = {}
     app.state.results = {}
 
+    # --- TODO Phase 11: async ingestion path ---------------------------------
+    # When explicitly enabled, wire the Redis client now and fail fast at
+    # boot — a chosen async mode must not boot half-wired and 503 later.
+    ingestion_cfg = cfg.get("ingestion", {})
+    if ingestion_cfg.get("mode") == "redis_stream":
+        try:
+            import redis  # optional extra: pip install cascadeguard[redis]
+        except ImportError as exc:
+            raise RuntimeError(
+                "ingestion.mode=redis_stream requires pip install cascadeguard[redis]"
+            ) from exc
+        url = os.environ.get("CASCADEGUARD_REDIS_URL", "redis://localhost:6379/0")
+        client = redis.Redis.from_url(url, socket_connect_timeout=2.0, socket_timeout=2.0)
+        client.ping()
+        app.state.redis = client
+
     # --- Phase 15: health endpoint -------------------------------------------
     from storage.calibration_store import DEFAULT_PATH, CalibrationStore
 

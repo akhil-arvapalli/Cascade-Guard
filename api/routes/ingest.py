@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import uuid
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Any as _Any
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from api.streaming import StreamEventError, parse_event
 from core.engine import Alert, AnalysisResult
 from core.graph.pipeline_graph import Document, PipelineGraph, Step
 from storage.repository import AlertRecord
@@ -81,7 +83,11 @@ def analyze_run(run_id: str, request: Request) -> dict[str, _Any]:
     engine = request.app.state.engine
     result = engine.analyze_run(graph, run_id=run_id)
     request.app.state.results[run_id] = result
-    _persist(request, run_id, graph, result)
+    _persist(request.app.state, run_id, graph, result)
+    # Lifecycle (V2-3): mark the run completed/alerted. The CUSUM detector
+    # stays pooled on this inline path — post-analysis blocking decisions
+    # project from its accumulated S_n; the worker path GCs it on run_end.
+    request.app.state.repository.complete_run(run_id, "alerted" if result.alerted else "completed")
 
     threading.Thread(
         target=request.app.state.dispatcher.dispatch,
@@ -108,8 +114,8 @@ def analyze_run(run_id: str, request: Request) -> dict[str, _Any]:
     }
 
 
-def _persist(request: Request, run_id: str, graph: PipelineGraph, result: AnalysisResult) -> None:
-    repo = request.app.state.repository
+def _persist(state: Any, run_id: str, graph: PipelineGraph, result: AnalysisResult) -> None:
+    repo = state.repository
     for node_id in graph.nodes:
         step = graph.nodes[node_id]
         repo.save_step(
@@ -150,3 +156,45 @@ def cheap_check(run_id: str, step_id: str, request: Request) -> dict[str, _Any]:
         "chrs": result.chrs[step_id],
         "fidelity": result.monitored_fidelity[step_id],
     }
+
+
+class EventIn(BaseModel):
+    type: str = Field(pattern="^(step|run_end)$")
+    run_id: str
+    template_id: str | None = None
+    event: dict[str, Any] | None = None
+
+
+class IngestIn(BaseModel):
+    events: list[EventIn]
+
+
+@router.post("/ingest")
+def ingest(payload: IngestIn, request: Request) -> dict[str, _Any]:
+    """Publish trace events onto the Redis stream for async analysis.
+
+    The async path: agents POST events here instead of calling /analyze
+    inline; api/worker.py consumes the stream, runs the full pipeline on
+    run_end, and persists results. 503 when ingestion.mode != redis_stream;
+    422 on stream-contract violations (api.streaming.parse_event).
+    """
+    client = getattr(request.app.state, "redis", None)
+    if client is None:
+        raise HTTPException(
+            503,
+            "stream ingestion is disabled: set ingestion.mode=redis_stream "
+            "(requires Redis via CASCADEGUARD_REDIS_URL)",
+        )
+    stream = request.app.state.config.get("ingestion", {}).get(
+        "stream_name", "cascadeguard:trace_events"
+    )
+    published = 0
+    for ev in payload.events:
+        data = ev.model_dump()
+        try:
+            parse_event(json.dumps(data))
+        except StreamEventError as exc:
+            raise HTTPException(422, f"event {published}: {exc}") from exc
+        client.xadd(stream, {"payload": json.dumps(data)})
+        published += 1
+    return {"published": published, "stream": stream}

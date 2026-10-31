@@ -66,6 +66,15 @@ storage:
 alerts:
   sinks: [] # e.g. [{type: webhook, url: ...}, {type: slack, url: ...}]
 
+ingestion:
+  # "inline" = synchronous POST /analyze (default); "redis_stream" = agents
+  # POST /v1/ingest and api/worker.py consumes (async path). Redis URL comes
+  # from CASCADEGUARD_REDIS_URL; mode=redis_stream fails fast at boot if Redis
+  # is unreachable.
+  mode: "inline"
+  stream_name: "cascadeguard:trace_events"
+  consumer_group: "cascadeguard-workers"
+
 blocking:
   # In-band decision endpoint POST /v1/decision/{run_id}/{step_id} (Phase 12):
   # notify_only returns scores but never blocks; block enforces the gates below.
