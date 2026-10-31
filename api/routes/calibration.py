@@ -40,12 +40,49 @@ def calibrate_cusum(payload: CalibrateIn, request: Request) -> dict[str, float]:
 
 class RefreshIn(BaseModel):
     template_id: str
+    use_history: bool = False
+    use_measured_costs: bool = False
+
+
+@router.get("/placement/templates")
+def list_templates(request: Request) -> dict[str, object]:
+    templates = sorted({g.pipeline_template_id for g in request.app.state.run_graphs.values()})
+    return {"templates": templates}
 
 
 @router.post("/placement/refresh")
 def refresh_placement(payload: RefreshIn, request: Request) -> dict[str, object]:
-    graph = request.app.state.run_graphs.get(payload.template_id)
+    # run_graphs is keyed by RUN id; resolve the template's graph by attribute
+    # (the v1 lookup by template_id only worked when the ids coincided — bug
+    # found by tests/test_placement_v2.py).
+    graph = next(
+        (
+            g
+            for g in request.app.state.run_graphs.values()
+            if g.pipeline_template_id == payload.template_id
+        ),
+        None,
+    )
     if graph is None or not graph.nodes:
         raise HTTPException(404, f"unknown or empty template graph {payload.template_id}")
-    s_star = request.app.state.engine.refresh_placement(payload.template_id, graph)
-    return {"template_id": payload.template_id, "S_star": sorted(s_star)}
+    history = None
+    if payload.use_history:
+        # Trace-simulated risk (Phase 8): every analyzed run of this template
+        # contributes its (graph, AnalysisResult) to the risk model.
+        history = [
+            (g, request.app.state.results[rid])
+            for rid, g in request.app.state.run_graphs.items()
+            if rid in request.app.state.results and g.pipeline_template_id == payload.template_id
+        ]
+    s_star = request.app.state.engine.refresh_placement(
+        payload.template_id,
+        graph,
+        history=history,
+        use_measured_costs=payload.use_measured_costs,
+    )
+    return {
+        "template_id": payload.template_id,
+        "S_star": sorted(s_star),
+        "history_traces": len(history) if history else 0,
+        "measured_costs": bool(payload.use_measured_costs),
+    }

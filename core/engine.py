@@ -12,6 +12,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 
@@ -19,6 +20,7 @@ from core.detection.cusum import CusumDetectorPool, CusumParams
 from core.embeddings import EmbeddingFn
 from core.graph.pipeline_graph import PipelineGraph, Step
 from core.localization.root_cause import RootCause, localize_root_cause
+from core.placement.cache import build_placement_cache
 from core.scoring.cascade_score import (
     assert_theorem_1,
     compute_chaf,
@@ -80,7 +82,9 @@ class CascadeGuardEngine:
         self.entail_fn = entail_fn
         self.counterfactual_stack = counterfactual_stack
         self.detector_pool = CusumDetectorPool()
-        self._placement_cache: dict[str, set[str]] = {}
+        cache_backend = config.get("monitor_placement", {}).get("cache_backend", "in_process")
+        self._placement_cache = build_placement_cache(cache_backend)
+        self._measured_costs: dict[str, float] | None = None
 
         prop_cfg = config.get("propagation_estimator", {})
         self.alpha_track: str = prop_cfg.get("track", "nli_proxy")
@@ -114,42 +118,67 @@ class CascadeGuardEngine:
         self.detector_pool.clear()
         return mu0, sigma
 
-    def refresh_placement(self, template_id: str, graph: PipelineGraph) -> set[str]:
+    def refresh_placement(
+        self,
+        template_id: str,
+        graph: PipelineGraph,
+        history: list[tuple[Any, Any]] | None = None,
+        use_measured_costs: bool = False,
+    ) -> set[str]:
         """Offline/nightly recompute of S* for a pipeline template (README §4.8).
 
-        NOTE (flagged): the marginal-risk model below is a structural PROXY —
-        risk mass covered among descendants — because the empirical
-        trace-simulated marginal_risk_fn is a TODO Phase 8 item requiring
-        historical data we don't have yet. Swap it there when it exists.
+        Two Phase 8 upgrades over the v1 structural proxy, both opt-in:
+        - ``history``: (graph, h_cascade-map | AnalysisResult) pairs →
+          trace-simulated marginal risk (core/placement/risk_model.py) where
+          risk MASS comes from real H_cascade instead of uniform descendant mass
+        - ``use_measured_costs``: live-measured monitor-primitive latencies
+          (core/placement/costs.py) instead of config placeholder ratios
+        Both fall back to the documented structural proxy / config values when
+        absent, and the result is written through the PlacementCache
+        (in-process or Redis) that the live path reads.
         """
         from core.placement.greedy_optimizer import greedy_monitor_placement
 
         mp_cfg = self.config.get("monitor_placement", {})
         budget = float(mp_cfg.get("budget_B", 10.0))
-        # Fallback mirrors configs/default.yaml ratios (LLM-call ~= 1.0, embed ~ 0.05)
-        # so analysis works before Phase 8 empirical calibration lands.
-        kind_costs = {
-            k: float(v)
-            for k, v in mp_cfg.get(
-                "step_kind_costs",
-                {
-                    "plan": 0.05,
-                    "retrieve": 0.05,
-                    "reason": 0.05,
-                    "tool_call": 1.1,
-                    "synthesize": 1.1,
-                },
-            ).items()
-        }
+        if use_measured_costs:
+            if self._measured_costs is None:
+                from core.placement.costs import measure_monitor_costs
+
+                self._measured_costs = measure_monitor_costs(self)
+            kind_costs = dict(self._measured_costs)
+        else:
+            # Fallback mirrors configs/default.yaml ratios (LLM-call ~= 1.0, embed ~ 0.05)
+            # so analysis works before Phase 8 empirical calibration lands.
+            kind_costs = {
+                k: float(v)
+                for k, v in mp_cfg.get(
+                    "step_kind_costs",
+                    {
+                        "plan": 0.05,
+                        "retrieve": 0.05,
+                        "reason": 0.05,
+                        "tool_call": 1.1,
+                        "synthesize": 1.1,
+                    },
+                ).items()
+            }
         weights: dict[str, float] = {}
 
-        def marginal_risk_proxy(step_id: str, selected: set[str]) -> float:
-            return CascadeGuardEngine._marginal_mass(step_id, selected, graph)
+        if history:
+            from core.placement.risk_model import HistoricalRiskModel
+
+            marginal_risk = HistoricalRiskModel(history).marginal_risk
+        else:
+            # Structural PROXY (flagged in v1): uniform descendant mass. Kept as
+            # the fallback when no historical traces exist for the template.
+            def marginal_risk(step_id: str, selected: set[str]) -> float:
+                return CascadeGuardEngine._marginal_mass(step_id, selected, graph)
 
         s_star = greedy_monitor_placement(
-            graph, weights, budget, marginal_risk_proxy, step_kind_costs=kind_costs
+            graph, weights, budget, marginal_risk, step_kind_costs=kind_costs
         )
-        self._placement_cache[template_id] = s_star
+        self._placement_cache.put(template_id, s_star)
         return s_star
 
     @staticmethod
@@ -186,10 +215,12 @@ class CascadeGuardEngine:
         assert_theorem_1(graph, chaf)
 
         # 5. Monitor placement S* — expensive scoring ONLY here (AGENTS.md §2.4).
+        # Live path READS the precomputed set from the placement cache
+        # (in-process or Redis) and only recomputes on a cache miss.
         template = graph.pipeline_template_id
-        if template not in self._placement_cache:
-            self.refresh_placement(template, graph)
-        s_star = self._placement_cache[template]
+        s_star = self._placement_cache.get(template)
+        if s_star is None:
+            s_star = self.refresh_placement(template, graph)
 
         # 6. Semantic entropy strictly limited to S*.
         se_values: dict[str, float] = {}

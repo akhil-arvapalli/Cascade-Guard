@@ -19,6 +19,10 @@ cusum:
 monitor_placement:
   budget_B: 10.0 # compute-cost units per pipeline execution
   refresh_schedule: nightly
+  cache_backend: "in_process" # "in_process" | "redis" (CASCADEGUARD_REDIS_URL) — Phase 8: live path reads precomputed S*
+  # Live-measure monitor costs on placement refresh (core/placement/costs.py).
+  # Non-deterministic timings — tests and CI keep false; jobs/refresh.py turns it on.
+  measure_costs: false
   # Per-step-kind monitoring costs, calibrated empirically from Phases 2-5 measurements.
   # Units: one LLM call ~= 1.0; embedding call ~= 0.02 (placeholder ratios, recalibrate).
   step_kind_costs:
