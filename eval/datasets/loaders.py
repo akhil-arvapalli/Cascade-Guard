@@ -103,9 +103,9 @@ def _build_trace(knowledge: str, question: str, answer: str, hallucinated: bool)
     return LabeledTrace(graph=graph, labels={"s3": hallucinated})
 
 
-def load_ragtruth(path: Path):
+def load_ragtruth(path: Path) -> None:
     raise DatasetNotAvailable(REQUIRED_NOTE.format(name="RAGTruth", path=path))
 
 
-def load_agenthallu(path: Path):
+def load_agenthallu(path: Path) -> None:
     raise DatasetNotAvailable(REQUIRED_NOTE.format(name="AgentHallu", path=path))
