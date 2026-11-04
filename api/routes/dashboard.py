@@ -141,6 +141,7 @@ def list_all_alerts(request: Request, run_id: str | None = None) -> dict[str, An
 
 # --- Phase 14 eval summary (the 150-trace HaluEval sample) ------------------
 
+
 def _eval_cache(request: Request) -> dict[str, Any]:
     cache = getattr(request.app.state, "eval_cache", None)
     if cache is None:
@@ -195,10 +196,10 @@ def eval_samples(request: Request) -> dict[str, Any]:
     cache = _eval_cache(request)
     if "samples" in cache:
         return {
-        "kappa": cache["kappa"],
-        "count": len(cache["samples"]),
-        "samples": cache["samples"],
-    }
+            "kappa": cache["kappa"],
+            "count": len(cache["samples"]),
+            "samples": cache["samples"],
+        }
     from pathlib import Path
 
     repo_root = Path(__file__).resolve().parents[2]
@@ -215,13 +216,15 @@ def eval_samples(request: Request) -> dict[str, Any]:
         result = engine.analyze_run(labeled.graph)
         max_chrs = max(result.chrs.values()) if result.chrs else 0.0
         predicted = max_chrs > kappa
-        rows.append({
-            "sample": f"sample-{i}",
-            "truth": "hallucinated" if truth else "faithful",
-            "max_chrs": round(max_chrs, 4),
-            "predicted": "hallucinated" if predicted else "faithful",
-            "match": predicted == truth,
-        })
+        rows.append(
+            {
+                "sample": f"sample-{i}",
+                "truth": "hallucinated" if truth else "faithful",
+                "max_chrs": round(max_chrs, 4),
+                "predicted": "hallucinated" if predicted else "faithful",
+                "match": predicted == truth,
+            }
+        )
     cache["samples"] = rows
     cache["kappa"] = round(kappa, 4)
     return {"kappa": cache["kappa"], "count": len(rows), "samples": rows}
