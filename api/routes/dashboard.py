@@ -163,7 +163,9 @@ def eval_summary(request: Request) -> dict[str, Any]:
     try:
         det = json.loads((results / "detection_eval.json").read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise HTTPException(404, "eval results not found; run python -m eval.run_detection_eval") from exc
+        raise HTTPException(
+            404, "eval results not found; run python -m eval.run_detection_eval"
+        ) from exc
     stats = {}
     try:
         stats = json.loads((results / "figs" / "fig_stats.json").read_text(encoding="utf-8"))
@@ -175,9 +177,15 @@ def eval_summary(request: Request) -> dict[str, Any]:
         "head_to_head": det.get("head_to_head", []),
         "theorem1": det.get("theorem1", det.get("chaf_check", {})),
         "latency": stats,
-        "figures": [f"/dashboard/figs/{n}" for n in (
-            "fig_latency.png", "fig_chaf_depth.png", "fig_h_distribution.png", "fig_lambda_sweep.png"
-        )],
+        "figures": [
+            f"/dashboard/figs/{n}"
+            for n in (
+                "fig_latency.png",
+                "fig_chaf_depth.png",
+                "fig_h_distribution.png",
+                "fig_lambda_sweep.png",
+            )
+        ],
     }
 
 
@@ -186,7 +194,11 @@ def eval_samples(request: Request) -> dict[str, Any]:
     """Per-sample verdicts for all 150 labeled traces (computed once, cached)."""
     cache = _eval_cache(request)
     if "samples" in cache:
-        return {"kappa": cache["kappa"], "count": len(cache["samples"]), "samples": cache["samples"]}
+        return {
+        "kappa": cache["kappa"],
+        "count": len(cache["samples"]),
+        "samples": cache["samples"],
+    }
     from pathlib import Path
 
     repo_root = Path(__file__).resolve().parents[2]
